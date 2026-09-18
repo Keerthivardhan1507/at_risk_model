@@ -286,23 +286,31 @@ Add:
 
 ### 1. Create and activate virtual environment
 
-```bash
+```
 python -m venv .venv
 .venv\Scripts\activate
-2. Install dependencies
-pip install -r requirements.txt
-3. Configure environment variables
 
+2. Install dependencies
+```
+pip install -r requirements.txt
+```
+3. Configure environment variables
+```
 Create a .env file:
 
+```
 DATABASE_URL=mysql+pymysql://username:password@localhost:3306/game_analytics
+
 4. Create the MySQL database
 
 Create a database named:
-
+```
 CREATE DATABASE game_analytics;
+```
 5. Load the database
+```
 python load_database.py
+```
 6. Start the FastAPI application
 uvicorn main:app --reload
 
@@ -315,7 +323,7 @@ The API documentation is available through the FastAPI Swagger interface.
 
 Your existing Model Limitations is good. I'd rename it:
 
-```markdown
+
 ## Known Limitations
 
 - The dataset contains only 180 players.
