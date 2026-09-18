@@ -281,7 +281,7 @@ This is currently the biggest missing practical section.
 
 Add:
 
-```markdown
+
 ## Setup and Installation
 
 ### 1. Create and activate virtual environment
