@@ -5,10 +5,15 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
+    "fastapi>=0.141.1",
     "ipykernel>=7.3.0",
     "matplotlib>=3.11.2",
     "numpy>=2.5.3",
     "pandas>=3.0.5",
+    "pymysql>=1.2.3",
+    "python-dotenv>=1.2.3",
     "scikit-learn>=1.9.1",
     "seaborn>=0.13.2",
+    "sqlalchemy>=2.0.54",
+    "uvicorn>=0.53.0",
 ]
