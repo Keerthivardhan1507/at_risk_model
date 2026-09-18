@@ -291,25 +291,27 @@ python -m venv .venv
 .venv\Scripts\activate
 
 2. Install dependencies
-```
+
 pip install -r requirements.txt
 ```
 3. Configure environment variables
-```
-Create a .env file:
 
+Create a .env file:
 ```
 DATABASE_URL=mysql+pymysql://username:password@localhost:3306/game_analytics
+```
 
 4. Create the MySQL database
 
-Create a database named:
-```
+Create a database named: 
+
 CREATE DATABASE game_analytics;
 ```
-5. Load the database
 ```
+5. Load the database
+
 python load_database.py
+```
 ```
 6. Start the FastAPI application
 uvicorn main:app --reload
