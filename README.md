@@ -1,12 +1,10 @@
 # Game Analytics & Retention Modeling
 
-## Project Overview
+Analyzes game event data to understand player engagement, retention, and
+spending behavior, and builds a machine learning model to identify players
+who may be at risk based on inactivity.
 
-This project analyzes game event data to understand player engagement,
-retention, and spending behavior. It also builds a machine learning model
-to identify players who may be at risk based on inactivity.
-
-The project includes:
+## Contents
 
 - Exploratory Data Analysis (EDA)
 - Player-level feature engineering
@@ -14,10 +12,7 @@ The project includes:
 - Cross-validation and model evaluation
 - Hyperparameter tuning
 - MySQL database integration
-- FastAPI backend
-- Prediction API
-
----
+- FastAPI backend with a prediction API
 
 ## Project Structure
 
@@ -39,306 +34,218 @@ game_assignment/
 ├── requirements.txt
 ├── README.md
 └── .env
-
 ```
-
 
 ## Dataset
 
-The dataset contains game events including:
+4,518 events from 180 players over a 14-day period, including:
 
-- session_start
-- session_end
-- level_start
-- level_complete
-- level_fail
-- purchase
+- `session_start`
+- `session_end`
+- `level_start`
+- `level_complete`
+- `level_fail`
+- `purchase`
 
-The dataset contains 4,518 events from 180 players over a 14-day period.
+---
+
+## Setup and Installation
+
+### 1. Create and activate a virtual environment
+
+```bash
+python -m venv .venv
+.venv\Scripts\activate
+```
+
+### 2. Install dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+### 3. Configure environment variables
+
+Create a `.env` file:
+
+```
+DATABASE_URL=mysql+pymysql://username:password@localhost:3306/game_analytics
+```
+
+> `.env` contains database credentials and should never be committed to
+> version control. It's already covered by `.gitignore`.
+
+### 4. Create the MySQL database
+
+```sql
+CREATE DATABASE game_analytics;
+```
+
+### 5. Load the database
+
+```bash
+python load_database.py
+```
+
+### 6. Start the FastAPI application
+
+```bash
+uvicorn main:app --reload
+```
+
+API documentation is available through the FastAPI Swagger interface.
 
 ---
 
 ## Part 1 — Exploratory Data Analysis
 
-The following metrics were calculated:
-
-- Daily Active Users (DAU)
-- Level completion rate
-- Average session duration
-- Total revenue
-- Paying players
-- ARPPU
-- D1 retention
+Metrics calculated: Daily Active Users (DAU), level completion rate, average
+session duration, total revenue, paying players, ARPPU, and D1 retention.
 
 ### Key Results
 
-- Average DAU: approximately 44
-- Maximum DAU: 66
-- Total revenue: $169.80
-- Paying players: 11
-- ARPPU: $15.44
+| Metric | Value |
+|---|---|
+| Average DAU | ~44 |
+| Maximum DAU | 66 |
+| Total revenue | $169.80 |
+| Paying players | 11 |
+| ARPPU | $15.44 |
 
 ### Session Duration
 
 Session duration was calculated by pairing `session_start` and `session_end`
-events using `session_id`.
+events using `session_id`. All 758 sessions in the dataset have both start
+and end events. Overall mean session duration was approximately 453 seconds
+(~7.55 minutes).
 
-The dataset contains 758 sessions, and all 758 sessions have both start and
-end events.
+### D1 Retention Definition
 
-The overall mean session duration was approximately 453 seconds
-(about 7.55 minutes).
+D1 retention was calculated using a cohort-based approach: for each player,
+the date of their first recorded event was treated as their cohort date, and
+a player was considered retained on D1 if they generated at least one event
+on the following calendar day. The final cohort day was excluded, since the
+dataset does not contain the following day for that cohort.
 
 ### Deeper Analysis
 
-#### Android vs iOS Session Duration
+**Android vs. iOS session duration** — A Welch two-sample t-test compared
+mean session duration between Android and iOS users. No statistically
+significant difference was found at the 5% significance level.
 
-A Welch two-sample t-test was used to compare mean session duration
-between Android and iOS users.
-
-The test did not provide sufficient statistical evidence of a difference
-in mean session duration at the 5% significance level.
-
-#### Engagement vs Spending
-
-Pearson correlation was used to examine associations between player
-engagement features and total spending.
-
-Sessions count showed the strongest positive association with total spend,
-although the relationship was weak.
-
-These results represent associations and should not be interpreted as
-evidence of causation.
+**Engagement vs. spending** — Pearson correlation examined associations
+between engagement features and total spending. Sessions count showed the
+strongest positive association with total spend, though the relationship
+was weak. These are associations only, not evidence of causation.
 
 ---
 
 ## Part 2 — Feature Engineering
 
-One row was created for each player.
+One row was created per player, with the following features:
 
-Features:
-
-- sessions_count_total
-- avg_session_duration_sec
-- levels_completed
-- levels_failed
-- purchases_count
-- total_spend
-- days_since_install
-- days_since_last_active
+- `sessions_count_total`
+- `avg_session_duration_sec`
+- `levels_completed`
+- `levels_failed`
+- `purchases_count`
+- `total_spend`
+- `days_since_install`
+- `days_since_last_active`
 
 ### At-Risk Definition
 
-A player is labelled at risk when:
-
-days_since_last_active > 3
-
-This threshold was selected because the dataset covers only 14 days and
-a 3-day inactivity period provides a practical separation while retaining
-a reasonably balanced target distribution.
+A player is labeled **at risk** when `days_since_last_active > 3`. This
+threshold was chosen because the dataset spans only 14 days, and a 3-day
+inactivity window gives a practical separation while keeping a reasonably
+balanced target distribution.
 
 ### Leakage Check
 
-`days_since_last_active` was not included in the model predictors because
-it directly defines the target label.
-
-Including it would allow the model to reproduce the labeling rule instead
-of learning meaningful behavioral patterns.
+`days_since_last_active` is excluded from the model predictors because it
+directly defines the target label — including it would let the model
+reproduce the labeling rule instead of learning meaningful behavioral
+patterns.
 
 ---
 
 ## Model
 
-A Random Forest Classifier was used.
-
-Cross-validation was performed using 5-fold StratifiedKFold.
-
-The following metrics were evaluated:
-
-- Accuracy
-- Precision
-- Recall
-- F1-score
-- ROC-AUC
+A **Random Forest Classifier**, evaluated with 5-fold `StratifiedKFold`
+cross-validation on accuracy, precision, recall, F1-score, and ROC-AUC.
 
 ### Hyperparameter Tuning
 
-The `max_depth` parameter was tuned using several candidate values.
+`max_depth` was tuned across several candidate values. The selected model:
 
-The selected model used:
+- `n_estimators = 200`
+- `max_depth = 5`
+- `class_weight = balanced`
+- `random_state = 42`
 
-- n_estimators = 200
-- max_depth = 5
-- class_weight = balanced
-- random_state = 42
+### Cross-Validated Results
 
-After tuning, the cross-validated results were approximately:
-
-- Accuracy: 0.794
-- Precision: 0.816
-- Recall: 0.818
-- F1-score: 0.810
-- ROC-AUC: 0.872
-
----
-
-## Model Limitations
-
-The model should not be treated as a production-ready churn model.
-
-The dataset contains only 180 players and covers a short 14-day period.
-The `at_risk` target is also a manually defined proxy based on inactivity
-rather than an observed future churn outcome.
-
-The model should therefore be validated using a larger future dataset and
-a genuine future-based churn or retention outcome before being used for
-automated product decisions.
+| Metric | Score |
+|---|---|
+| Accuracy | 0.794 |
+| Precision | 0.816 |
+| Recall | 0.818 |
+| F1-score | 0.810 |
+| ROC-AUC | 0.872 |
 
 ---
 
 ## Part 3 — FastAPI
 
-The API provides three main endpoints.
-### GET /metrics/summary
+### `GET /metrics/summary`
 
-Returns the main game analytics KPIs:
+Returns the main game analytics KPIs: total players, total revenue, paying
+players, ARPPU, DAU trend, level completion rate by level, and D1 retention
+by cohort.
 
-- Total players
-- Total revenue
-- Paying players
-- ARPPU
-- DAU trend
-- Level completion rate by level
-- D1 retention by cohort
+### `GET /players/{id}/risk`
 
-### GET /players/{id}/risk
+Returns a stored player's features plus their at-risk prediction and risk
+probability. Returns HTTP 404 if the player does not exist.
 
-Returns the stored player's features together with:
+### `POST /predict`
 
-- At-risk prediction
-- Risk probability
+Accepts an arbitrary player feature set and returns an at-risk prediction
+and risk probability. Accepts the same seven features used in training:
 
-Returns HTTP 404 when the player does not exist.
+- `sessions_count_total`
+- `avg_session_duration_sec`
+- `levels_completed`
+- `levels_failed`
+- `purchases_count`
+- `total_spend`
+- `days_since_install`
 
-### POST /predict
-
-Accepts an arbitrary player feature set and returns:
-
-- At-risk prediction
-- Risk probability
-The request accepts the same seven model features used during training:
-
-- sessions_count_total
-- avg_session_duration_sec
-- levels_completed
-- levels_failed
-- purchases_count
-- total_spend
-- days_since_install
-
-`days_since_last_active` is intentionally not required for prediction because
-it directly defines the at-risk label and would cause target leakage.
+`days_since_last_active` is intentionally excluded, since it directly
+defines the at-risk label and would cause target leakage.
 
 ---
-
-### D1 Retention Definition
-
-D1 retention was calculated using a cohort-based approach.
-
-For each player, the date of their first recorded event was treated as their
-cohort date. A player was considered retained on D1 if they generated at least
-one event on the following calendar day.
-
-The final cohort day was excluded because the dataset does not contain the
-following day for that cohort.
-
 
 ## Database
 
 MySQL is used to persist the engineered player-level feature table.
 
-Database:
-
-game_analytics
-
-Table:
-
-player_features
+- **Database:** `game_analytics`
+- **Table:** `player_features`
 
 ---
-
-The .env file contains database credentials and should not be committed
-to version control.
-
-
-**Do not actually include `.env` in the GitHub repository.** Your `.gitignore` already handles that.
-
----
-
-## 11. Add setup/run instructions
-
-This is currently the biggest missing practical section.
-
-Add:
-
-
-## Setup and Installation
-
-### 1. Create and activate virtual environment
-
-```
-python -m venv .venv
-.venv\Scripts\activate
-
-2. Install dependencies
-
-pip install -r requirements.txt
-```
-3. Configure environment variables
-
-Create a .env file:
-```
-DATABASE_URL=mysql+pymysql://username:password@localhost:3306/game_analytics
-```
-
-4. Create the MySQL database
-
-Create a database named: 
-
-CREATE DATABASE game_analytics;
-```
-```
-5. Load the database
-
-python load_database.py
-```
-```
-6. Start the FastAPI application
-uvicorn main:app --reload
-
-The API documentation is available through the FastAPI Swagger interface.
-
-
----
-
-## 12. Add a Known Limitations section
-
-Your existing Model Limitations is good. I'd rename it:
-
 
 ## Known Limitations
 
 - The dataset contains only 180 players.
 - The observation period is only 14 days.
-- The at-risk label is a manually defined inactivity proxy rather than a
-  genuine future churn outcome.
+- The at-risk label is a manually defined inactivity proxy, not a genuine
+  future churn outcome.
 - There is no separate future holdout dataset.
 - `days_since_install` has high feature importance and may reflect player
   lifecycle effects within the short observation window.
-- Correlation analysis identifies associations and does not establish
+- Correlation analysis identifies associations only and does not establish
   causality.
-- The model should be validated on a larger future dataset before production
-  deployment.
-
-
-
+- The model should be validated on a larger future dataset, with a genuine
+  future-based churn or retention outcome, before use in production or
+  automated product decisions.
