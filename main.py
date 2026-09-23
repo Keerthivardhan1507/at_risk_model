@@ -1,5 +1,5 @@
 from pathlib import Path
-from fastapi import FastAPI
+from fastapi import FastAPI,HTTPException
 from sqlalchemy import text
 from database import engine
 import pickle
@@ -325,9 +325,10 @@ def player_risk(player_id: int):
 
     # Player not found
     if result is None:
-        return {
-            "error": "Player not found"
-        }
+        raise HTTPException(
+            status_code=404,
+            detail=f"Player with ID {player_id} not found"
+        )
 
     # Convert database result to dictionary
     player = dict(result)
